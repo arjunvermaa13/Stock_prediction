@@ -1,0 +1,173 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+import yfinance as yf  # To download stock data
+from datetime import datetime, timedelta
+
+print("✅ All libraries imported successfully!\n")
+
+# ============================================
+# STEP 2: Download Stock Data
+# ============================================
+# Let's use Apple stock (AAPL) as an example
+# You can change this to any stock: 'GOOGL', 'MSFT', 'TSLA', etc.
+
+stock_symbol = 'AAPL'  # Change this to any stock ticker
+print(f"📈 Downloading {stock_symbol} stock data...")
+
+# Download 2 years of historical data
+stock_data = yf.download(stock_symbol, start='2022-01-01', end='2024-01-01')
+
+print(f"✅ Downloaded {len(stock_data)} days of data\n")
+
+# Look at the first few rows
+print("First 5 rows of data:")
+print(stock_data.head())
+print("\n")
+
+# ============================================
+# STEP 3: Prepare the Data
+# ============================================
+# We'll use the 'Close' price (the price at end of day)
+# We'll predict tomorrow's price based on today's data
+
+# Create a new column for tomorrow's price
+stock_data['Next_Day_Price'] = stock_data['Close'].shift(-1)
+
+# Remove the last row (it has no "next day" price)
+stock_data = stock_data[:-1]
+
+# Create features (X) - what we use to predict
+# We'll use: Open, High, Low, Close, Volume
+X = stock_data[['Open', 'High', 'Low', 'Close', 'Volume']].values
+
+# Create target (y) - what we want to predict
+y = stock_data['Next_Day_Price'].values
+
+print("📊 Data prepared!")
+print(f"   Features shape: {X.shape}")
+print(f"   Target shape: {y.shape}\n")
+
+# ============================================
+# STEP 4: Split Data into Training and Testing
+# ============================================
+# 80% for training, 20% for testing
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+print("🔀 Data split complete!")
+print(f"   Training samples: {len(X_train)}")
+print(f"   Testing samples: {len(X_test)}\n")
+
+# ============================================
+# STEP 5: Train the Model
+# ============================================
+print("🤖 Training the prediction model...")
+
+# Create a Linear Regression model (simple and good for beginners)
+model = LinearRegression()
+
+# Train it with historical data
+model.fit(X_train, y_train)
+
+print("✅ Model trained successfully!\n")
+
+# ============================================
+# STEP 6: Make Predictions
+# ============================================
+print("🔮 Making predictions...")
+
+# Predict on training data
+train_predictions = model.predict(X_train)
+
+# Predict on testing data (data the model has never seen)
+test_predictions = model.predict(X_test)
+
+print("✅ Predictions complete!\n")
+
+# ============================================
+# STEP 7: Evaluate the Model
+# ============================================
+print("📊 MODEL PERFORMANCE:")
+print("=" * 50)
+
+# Calculate accuracy on training data
+train_r2 = r2_score(y_train, train_predictions)
+train_rmse = np.sqrt(mean_squared_error(y_train, train_predictions))
+
+print(f"Training Data:")
+print(f"  R² Score: {train_r2:.4f} (closer to 1.0 = better)")
+print(f"  RMSE: ${train_rmse:.2f} (average prediction error)\n")
+
+# Calculate accuracy on testing data
+test_r2 = r2_score(y_test, test_predictions)
+test_rmse = np.sqrt(mean_squared_error(y_test, test_predictions))
+
+print(f"Testing Data:")
+print(f"  R² Score: {test_r2:.4f}")
+print(f"  RMSE: ${test_rmse:.2f}\n")
+
+# ============================================
+# STEP 8: Visualize the Results
+# ============================================
+print("📈 Creating visualization...\n")
+
+# Create a plot comparing actual vs predicted prices
+plt.figure(figsize=(12, 6))
+
+# Plot actual prices
+plt.plot(y_test[:50], label='Actual Prices', marker='o', linewidth=2)
+
+# Plot predicted prices
+plt.plot(test_predictions[:50], label='Predicted Prices', marker='x', linewidth=2)
+
+plt.title(f'{stock_symbol} Stock Price Prediction - First 50 Test Samples', fontsize=14, fontweight='bold')
+plt.xlabel('Sample Number', fontsize=12)
+plt.ylabel('Stock Price ($)', fontsize=12)
+plt.legend(fontsize=10)
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+# ============================================
+# STEP 9: Predict Next Day's Price
+# ============================================
+print("🔮 PREDICTING TOMORROW'S PRICE:")
+print("=" * 50)
+
+# Get the most recent day's data
+latest_data = stock_data[['Open', 'High', 'Low', 'Close', 'Volume']].iloc[-1:].values
+
+# Predict tomorrow's price
+tomorrow_prediction = model.predict(latest_data)[0]
+
+print(f"Today's Close Price: ${stock_data['Close'].iloc[-1]:.2f}")
+print(f"Predicted Tomorrow's Price: ${tomorrow_prediction:.2f}")
+print(f"Expected Change: ${tomorrow_prediction - stock_data['Close'].iloc[-1]:.2f}")
+
+if tomorrow_prediction > stock_data['Close'].iloc[-1]:
+    print("📈 Prediction: Price will GO UP")
+else:
+    print("📉 Prediction: Price will GO DOWN")
+
+
+print("\n" + "=" * 50)
+print("📚 WHAT THIS MODEL DOES:")
+print("=" * 50)
+print("""
+1. Downloads historical stock data (2 years)
+2. Uses 5 features: Open, High, Low, Close, Volume
+3. Learns patterns from 80% of the data
+4. Tests predictions on 20% of unseen data
+5. Predicts tomorrow's closing price
+
+⚠️  IMPORTANT DISCLAIMER:
+- This is a LEARNING project, not financial advice
+- Real stock prediction is much more complex
+- NEVER invest real money based on this model
+- Past performance doesn't guarantee future results
+- Use this to learn, not to trade!
+""")
+print("=" * 50)
